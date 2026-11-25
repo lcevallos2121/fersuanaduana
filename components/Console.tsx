@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import HudBackground from "./HudBackground";
 import Onboarding from "./Onboarding";
+import InvoiceTool from "./InvoiceTool";
 import { buscarArancel, supabaseReady } from "@/lib/supabase";
 import { liquidar, usd, type Entrada } from "@/lib/tributos";
 import type { Arancel } from "@/lib/types";
 
-type Mode = "buscar" | "imagen" | "calcular" | "consultar";
+type Mode = "buscar" | "imagen" | "declaracion" | "calcular" | "consultar";
 
 /* ---------- iconos ---------- */
 const I = {
@@ -26,6 +27,11 @@ const I = {
   image: (p: any) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...p}>
       <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" />
+    </svg>
+  ),
+  doc: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M9 13h6M9 17h4" />
     </svg>
   ),
   calc: (p: any) => (
@@ -224,6 +230,9 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
           <button className="rail-btn" data-active={mode === "imagen"} onClick={() => setMode("imagen")} title="Clasificar por imagen">
             <I.image className="h-5 w-5" />
           </button>
+          <button className="rail-btn" data-active={mode === "declaracion"} onClick={() => setMode("declaracion")} title="Declaración (invoice → Excel)">
+            <I.doc className="h-5 w-5" />
+          </button>
           <button className="rail-btn" data-active={mode === "calcular"} onClick={() => setMode("calcular")} title="Liquidar">
             <I.calc className="h-5 w-5" />
           </button>
@@ -241,7 +250,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
           {/* encabezado minimal */}
           <div className="flex items-center justify-between px-8 pt-6">
             <div className="mono text-xs tracking-[0.35em] text-[var(--muted)]">
-              FERSUANADUANA <span className="text-[var(--cyan)]">/</span> {mode === "buscar" ? "CLASIFICACIÓN" : mode === "imagen" ? "IMAGEN" : mode === "calcular" ? "LIQUIDACIÓN" : "CONSULTA"}
+              FERSUANADUANA <span className="text-[var(--cyan)]">/</span> {mode === "buscar" ? "CLASIFICACIÓN" : mode === "imagen" ? "IMAGEN" : mode === "declaracion" ? "DECLARACIÓN" : mode === "calcular" ? "LIQUIDACIÓN" : "CONSULTA"}
             </div>
             <div className="flex items-center gap-3">
               <span className="mono hidden text-[11px] text-[var(--muted)] sm:inline">ARANCEL 002-2023</span>
@@ -367,6 +376,8 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
               </div>
             </div>
           )}
+
+          {mode === "declaracion" && <InvoiceTool />}
 
           {/* ---- CALCULAR ---- */}
           {mode === "calcular" && (
