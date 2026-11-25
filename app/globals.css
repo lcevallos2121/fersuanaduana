@@ -24,7 +24,7 @@ body {
     var(--bg);
   color: var(--fg);
   font-family: var(--font-hud), system-ui, sans-serif;
-  overflow: hidden;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import HudBackground from "./HudBackground";
+import Onboarding from "./Onboarding";
 import { buscarArancel, supabaseReady } from "@/lib/supabase";
 import { liquidar, usd, type Entrada } from "@/lib/tributos";
 import type { Arancel } from "@/lib/types";
@@ -67,7 +68,7 @@ function Animated({ value, className }: { value: number; className?: string }) {
   return <span className={className}>{usd(disp)}</span>;
 }
 
-export default function Console() {
+export default function Console({ userEmail, onLogout }: { userEmail?: string; onLogout?: () => void }) {
   const [mode, setMode] = useState<Mode>("buscar");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Arancel[]>([]);
@@ -149,6 +150,7 @@ export default function Console() {
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       <HudBackground />
+      <Onboarding />
 
       {/* aviso PC */}
       <div className="fixed inset-0 z-50 hidden max-[940px]:flex items-center justify-center bg-[var(--bg)] px-8 text-center">
@@ -186,7 +188,17 @@ export default function Console() {
             <div className="mono text-xs tracking-[0.35em] text-[var(--muted)]">
               FERSUANADUANA <span className="text-[var(--cyan)]">/</span> {mode === "buscar" ? "CLASIFICACIÓN" : mode === "calcular" ? "LIQUIDACIÓN" : "CONSULTA"}
             </div>
-            <div className="mono text-[11px] text-[var(--muted)]">ARANCEL 002-2023</div>
+            <div className="flex items-center gap-3">
+              <span className="mono hidden text-[11px] text-[var(--muted)] sm:inline">ARANCEL 002-2023</span>
+              {userEmail && (
+                <span className="mono max-w-[160px] truncate text-[11px] text-[var(--muted)]" title={userEmail}>{userEmail}</span>
+              )}
+              {onLogout && (
+                <button onClick={onLogout} title="Cerrar sesión" className="rail-btn !h-8 !w-8 text-[var(--muted)] hover:text-[var(--cyan)]">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* ---- BUSCAR ---- */}
