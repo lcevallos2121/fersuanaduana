@@ -156,15 +156,15 @@ export default function InvoiceTool() {
                   <th className="px-2 py-2 text-left">Subpartida</th>
                   <th className="px-2 py-2 text-right">%</th>
                   <th className="px-2 py-2 text-left">Regla</th>
+                  <th className="px-2 py-2 text-left">Nota (por qué)</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((it, i) => (
                   <tr key={i} className="border-t border-[var(--line)] align-top">
                     <td className="px-2 py-2 text-[var(--muted)]">{i + 1}</td>
-                    <td className="max-w-[240px] px-2 py-2">
+                    <td className="max-w-[220px] px-2 py-2">
                       <div className="truncate text-[var(--fg)]" title={it.descripcion}>{it.descripcion}</div>
-                      {it.justificacion && <div className="mt-0.5 truncate text-[11px] text-[var(--muted)]" title={it.justificacion}>{it.justificacion}</div>}
                     </td>
                     <td className="mono px-2 py-2 text-[12px] text-[var(--muted)]">{it.modelo || "—"}</td>
                     <td className="mono px-2 py-2 text-right text-[var(--fg)]">{it.cantidad || 1}</td>
@@ -177,13 +177,14 @@ export default function InvoiceTool() {
                     </td>
                     <td className="mono px-2 py-2 text-right text-[var(--amber)]">{it.ad_valorem != null ? `${it.ad_valorem}%` : "—"}</td>
                     <td className="mono px-2 py-2 text-[11px] text-[var(--muted)]">{it.regla || "—"}</td>
+                    <td className="max-w-[240px] px-2 py-2 text-[12px] leading-snug text-[var(--muted)]">{it.justificacion || "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <p className="mono mt-2 pb-3 text-[11px] text-[var(--muted)]">
-            Revisa y ajusta cada subpartida antes de descargar. Clasificación asistida por IA — verifica en el SENAE.
+            Revisa y ajusta cada subpartida antes de descargar. El Excel incluye una columna final con la nota explicativa (bórrala antes de subir a ECUAPASS). Clasificación asistida por IA — verifica en el SENAE.
           </p>
         </>
       )}
