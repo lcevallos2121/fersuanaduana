@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { descargarExcel, type ItemClasificado, type Cabecera } from "@/lib/ecuapass";
 
 const PLAN_KEY = "fersua-plan";
@@ -25,6 +26,7 @@ export default function InvoiceTool() {
   const [cab, setCab] = useState<Cabecera | null>(null);
   const [items, setItems] = useState<ItemClasificado[]>([]);
   const [fileName, setFileName] = useState("");
+  const [guardado, setGuardado] = useState<"idle" | "saving" | "ok">("idle");
 
   useEffect(() => { setPlan(getPlan()); }, []);
   const premium = plan === "premium";
@@ -32,7 +34,7 @@ export default function InvoiceTool() {
   async function onFile(file: File) {
     if (!file) return;
     if (file.size > 9 * 1024 * 1024) { setErr("El archivo supera 9 MB."); return; }
-    setErr(null); setItems([]); setCab(null); setFileName(file.name);
+    setErr(null); setItems([]); setCab(null); setFileName(file.name); setGuardado("idle");
     let dataUrl: string;
     try { dataUrl = await fileToDataURL(file); } catch { setErr("No se pudo leer el archivo."); return; }
     setBusy(true);
@@ -52,6 +54,18 @@ export default function InvoiceTool() {
 
   function editSub(i: number, v: string) {
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, subpartida: v } : it)));
+  }
+
+  async function guardar() {
+    if (!supabase || !items.length || guardado === "saving") return;
+    setGuardado("saving");
+    const { error } = await supabase.from("declaraciones").insert({
+      numero_factura: cab?.numero_factura || null,
+      proveedor: cab?.proveedor || null,
+      cabecera: cab || {},
+      items,
+    });
+    setGuardado(error ? "idle" : "ok");
   }
 
   function confirmarPago() {
@@ -122,10 +136,16 @@ export default function InvoiceTool() {
           <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
         </label>
         {items.length > 0 && (
-          <button onClick={() => descargarExcel(items, cab || {})} className="inline-flex items-center gap-2 rounded-xl border border-[var(--line-strong)] px-5 py-2.5 font-semibold text-[var(--cyan)] transition hover:bg-[rgba(56,225,255,0.1)]">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
-            Descargar Excel ECUAPASS
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={guardar} disabled={guardado === "saving"} className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] px-4 py-2.5 font-semibold text-[var(--fg)] transition hover:border-[var(--cyan)] disabled:opacity-60">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" /><path d="M17 21v-8H7v8M7 3v5h8" /></svg>
+              {guardado === "ok" ? "Guardado ✓" : guardado === "saving" ? "Guardando…" : "Guardar en historial"}
+            </button>
+            <button onClick={() => descargarExcel(items, cab || {})} className="inline-flex items-center gap-2 rounded-xl border border-[var(--line-strong)] px-5 py-2.5 font-semibold text-[var(--cyan)] transition hover:bg-[rgba(56,225,255,0.1)]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
+              Descargar Excel ECUAPASS
+            </button>
+          </div>
         )}
       </div>
 

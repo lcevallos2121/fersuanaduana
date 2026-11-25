@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 
 export type ItemClasificado = {
   descripcion: string;
@@ -126,6 +126,47 @@ export function descargarExcel(items: ItemClasificado[], cab: Cabecera) {
   const data = items.map((it, i) => [...buildRow(it, i, cab), it.justificacion || ""]);
   const aoa: (string | number)[][] = [header, ...data];
   const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const noteCol = header.length - 1;
+
+  // anchos de columna (por posición de dato: 0=subpartida, 4=descripción, 34=proveedor, última=nota)
+  ws["!cols"] = header.map((_, i) => ({
+    wch: i === 0 ? 14 : i === 4 ? 34 : i === 8 ? 28 : i === 14 ? 28 : i === 34 ? 26 : i === noteCol ? 55 : 14,
+  }));
+  ws["!rows"] = [{ hpt: 30 }];
+  ws["!freeze"] = { xSplit: 0, ySplit: 1 } as any;
+
+  const borde = {
+    top: { style: "thin", color: { rgb: "DCE6EC" } },
+    bottom: { style: "thin", color: { rgb: "DCE6EC" } },
+    left: { style: "thin", color: { rgb: "DCE6EC" } },
+    right: { style: "thin", color: { rgb: "DCE6EC" } },
+  };
+  const range = XLSX.utils.decode_range(ws["!ref"] as string);
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const cell = ws[XLSX.utils.encode_cell({ r, c })];
+      if (!cell) continue;
+      const wrap = c === 4 || c === 8 || c === 14 || c === noteCol;
+      if (r === 0) {
+        cell.s = {
+          font: { bold: true, sz: 9, color: { rgb: "FFFFFF" } },
+          fill: { patternType: "solid", fgColor: { rgb: c === noteCol ? "B8860F" : "0E7C86" } },
+          alignment: { horizontal: "center", vertical: "center", wrapText: true },
+          border: borde,
+        };
+      } else {
+        cell.s = {
+          font: { sz: 9, color: { rgb: "22303A" } },
+          fill: { patternType: "solid", fgColor: { rgb: r % 2 === 0 ? "F3F8FA" : "FFFFFF" } },
+          alignment: { vertical: "center", wrapText: wrap },
+          border: borde,
+        };
+        if (c === 0) cell.s.font = { sz: 10, bold: true, color: { rgb: "0A5A63" } };
+        if (c === noteCol) cell.s.font = { sz: 9, italic: true, color: { rgb: "7A6A3A" } };
+      }
+    }
+  }
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Hoja1");
   const nombre = `declaracion_${(cab.numero_factura || "ecuapass").replace(/\W+/g, "")}.xlsx`;

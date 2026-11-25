@@ -4,11 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import HudBackground from "./HudBackground";
 import Onboarding from "./Onboarding";
 import InvoiceTool from "./InvoiceTool";
+import HistorialTool from "./HistorialTool";
 import { buscarArancel, supabaseReady } from "@/lib/supabase";
 import { liquidar, usd, type Entrada } from "@/lib/tributos";
 import type { Arancel } from "@/lib/types";
 
-type Mode = "buscar" | "imagen" | "declaracion" | "calcular" | "consultar";
+type Mode = "buscar" | "imagen" | "declaracion" | "calcular" | "consultar" | "historial";
 
 /* ---------- iconos ---------- */
 const I = {
@@ -32,6 +33,11 @@ const I = {
   doc: (p: any) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...p}>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M9 13h6M9 17h4" />
+    </svg>
+  ),
+  clock: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
     </svg>
   ),
   calc: (p: any) => (
@@ -239,6 +245,9 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
           <button className="rail-btn" data-active={mode === "consultar"} onClick={() => setMode("consultar")} title="Consultar IA">
             <I.chat className="h-5 w-5" />
           </button>
+          <button className="rail-btn" data-active={mode === "historial"} onClick={() => setMode("historial")} title="Historial">
+            <I.clock className="h-5 w-5" />
+          </button>
           <div className="mt-auto flex flex-col items-center gap-1">
             <span className={`h-2 w-2 rounded-full ${supabaseReady ? "bg-[var(--good)]" : "bg-[var(--bad)]"} blink`} />
             <span className="mono text-[9px] text-[var(--muted)]">EC</span>
@@ -250,7 +259,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
           {/* encabezado minimal */}
           <div className="flex items-center justify-between px-8 pt-6">
             <div className="mono text-xs tracking-[0.35em] text-[var(--muted)]">
-              FERSUANADUANA <span className="text-[var(--cyan)]">/</span> {mode === "buscar" ? "CLASIFICACIÓN" : mode === "imagen" ? "IMAGEN" : mode === "declaracion" ? "DECLARACIÓN" : mode === "calcular" ? "LIQUIDACIÓN" : "CONSULTA"}
+              FERSUANADUANA <span className="text-[var(--cyan)]">/</span> {mode === "buscar" ? "CLASIFICACIÓN" : mode === "imagen" ? "IMAGEN" : mode === "declaracion" ? "DECLARACIÓN" : mode === "calcular" ? "LIQUIDACIÓN" : mode === "historial" ? "HISTORIAL" : "CONSULTA"}
             </div>
             <div className="flex items-center gap-3">
               <span className="mono hidden text-[11px] text-[var(--muted)] sm:inline">ARANCEL 002-2023</span>
@@ -378,6 +387,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
           )}
 
           {mode === "declaracion" && <InvoiceTool />}
+          {mode === "historial" && <HistorialTool />}
 
           {/* ---- CALCULAR ---- */}
           {mode === "calcular" && (
