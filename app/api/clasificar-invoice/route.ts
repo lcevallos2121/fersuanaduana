@@ -14,10 +14,8 @@ const EXTRACT_PROMPT = `Eres un agente de aduana experto de Ecuador (SENAE). Ana
 Devuelve SOLO JSON: {"cabecera":{"numero_factura":"","fecha":"","proveedor":"","pais_origen":"","pais_embarque":"","incoterm":"","moneda":"","lugar_entrega":""},"items":[{"descripcion":"","modelo":"","marca":"","cantidad":0,"precio_unitario":0,"precio_total":0,"subpartida":""}]}`;
 
 const REFINE_PROMPT = `Eres un clasificador arancelario experto de Ecuador. Para cada ítem tienes su descripción y una lista de subpartidas OFICIALES candidatas del arancel (código de 10 dígitos "c" y su texto "d").
-Elige para cada ítem la subpartida MÁS ESPECÍFICA que corresponda según las 6 Reglas Generales de Interpretación. Prefiere SIEMPRE la subpartida específica sobre las de "los demás"; usa "los demás" solo si ninguna específica aplica. Elige un código que esté en la lista de candidatos.
-Devuelve SOLO JSON: {"items":[{"i":0,"subpartida":"<10 dígitos del código elegido>","regla":"regla(s) aplicada(s)","justificacion":"explicación clara de por qué ese producto va en esa partida, 1-2 frases"}]}.
-Datos:
-`;
+Elige para cada ítem la subpartida MÁS ESPECÍFICA que corresponda según las 6 Reglas Generales de Interpretación. Cuando se incluyan NOTAS EXPLICATIVAS oficiales de la partida, úsalas como criterio principal para decidir si el producto pertenece o se excluye de esa partida. Prefiere SIEMPRE la subpartida específica sobre las de "los demás"; usa "los demás" solo si ninguna específica aplica. Elige un código que esté en la lista de candidatos.
+Devuelve SOLO JSON: {"items":[{"i":0,"subpartida":"<10 dígitos del código elegido>","regla":"regla(s) aplicada(s)","justificacion":"explicación clara de por qué ese producto va en esa partida, citando la nota explicativa si aplica, 1-2 frases"}]}.`;
 
 async function rpcPrefix(url: string, key: string, prefix: string) {
   try {
@@ -44,6 +42,23 @@ async function gruposCandidatos(items: any[]) {
       map.set(p, rows.map((r) => ({ c: norm(r.subpartida), d: r.descripcion, adv: r.ad_valorem })));
     }),
   );
+  return map;
+}
+
+async function fetchNotas(headings: string[]) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const map = new Map<string, { titulo: string; texto: string }>();
+  if (!url || !key || !headings.length) return map;
+  try {
+    const inList = headings.map((h) => `"${h}"`).join(",");
+    const r = await fetch(`${url}/rest/v1/notas_explicativas?partida=in.(${inList})&select=partida,titulo,texto`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!r.ok) return map;
+    const rows = (await r.json()) as any[];
+    rows.forEach((x) => map.set(x.partida, { titulo: x.titulo || "", texto: x.texto || "" }));
+  } catch {}
   return map;
 }
 
@@ -82,19 +97,33 @@ export async function POST(req: NextRequest) {
     const cabecera = ext.cabecera || {};
     if (!items.length) return NextResponse.json({ cabecera, items: [] });
 
-    // candidatos reales por grupo
+    // candidatos reales por grupo + notas explicativas de las partidas
     const grupos = await gruposCandidatos(items);
+    const headings = Array.from(new Set(items.map((it) => norm(it.subpartida).slice(0, 4)).filter((h) => h.length === 4)));
+    const notas = await fetchNotas(headings);
+    const notasTxt = headings
+      .map((h) => {
+        const n = notas.get(h);
+        return n ? `Partida ${h.slice(0, 2)}.${h.slice(2, 4)} — ${n.titulo}\n${n.texto.slice(0, 2200)}` : "";
+      })
+      .filter(Boolean)
+      .join("\n\n");
 
-    // Paso 2: elegir el código específico real + justificación
+    // Paso 2: elegir el código específico real + justificación (guiado por las notas)
     const refineInput = items.map((it, i) => ({
       i,
       descripcion: it.descripcion,
       modelo: it.modelo,
       candidatos: (grupos.get(norm(it.subpartida).slice(0, 6)) || []).slice(0, 40).map((x) => ({ c: x.c, d: x.d })),
     }));
+    const refinePrompt =
+      REFINE_PROMPT +
+      (notasTxt ? "\n\nNOTAS EXPLICATIVAS OFICIALES (criterio principal):\n" + notasTxt : "") +
+      "\n\nÍtems a clasificar:\n" +
+      JSON.stringify(refineInput);
     let refined: any[] = [];
     try {
-      const rr = await geminiJSON([{ text: REFINE_PROMPT + JSON.stringify(refineInput) }], model, key, 8000);
+      const rr = await geminiJSON([{ text: refinePrompt }], model, key, 8000);
       refined = Array.isArray(rr.items) ? rr.items : [];
     } catch { refined = []; }
 
