@@ -113,7 +113,10 @@ function buildRow(it: ItemClasificado, i: number, cab: Cabecera): (string | numb
     "R01. Vinculacion con el proveedor": "0",
     "N19 Pais de compra": paisO,
   };
-  return HEADERS.map((h) => (h in v ? v[h] : ""));
+  // ECUAPASS lee los datos por POSICIÓN y la primera columna de datos es la Subpartida
+  // (la columna "H01. Numero de item" no se llena: el número es implícito por la fila).
+  // Por eso los datos van desplazados una columna a la izquierda respecto al encabezado.
+  return HEADERS.slice(1).map((h) => (h in v ? v[h] : ""));
 }
 
 export function descargarExcel(items: ItemClasificado[], cab: Cabecera) {
