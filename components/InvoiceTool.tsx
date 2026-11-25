@@ -150,7 +150,7 @@ export default function InvoiceTool() {
       </div>
 
       {fileName && <p className="mono mb-2 text-[11px] text-[var(--muted)]">{fileName}</p>}
-      {busy && <div className="flex items-center gap-3 text-sm text-[var(--muted)]"><span className="dots"><i /><i /><i /></span> Leyendo y clasificando los ítems…</div>}
+      {busy && <div className="flex items-center gap-3 text-sm text-[var(--muted)]"><span className="dots"><i /><i /><i /></span> Leyendo y clasificando los ítems… (puede tardar ~20 s)</div>}
       {err && <p className="text-sm text-[var(--bad)]">{err}</p>}
       {!busy && !err && items.length === 0 && (
         <p className="mono mt-16 text-center text-sm text-[var(--muted)]">Sube la factura del cliente. La IA extrae y clasifica cada ítem.</p>

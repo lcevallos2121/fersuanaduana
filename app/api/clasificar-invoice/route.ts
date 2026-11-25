@@ -65,16 +65,29 @@ async function fetchNotas(headings: string[]) {
 async function geminiJSON(parts: any[], model: string, key: string, maxTokens: number) {
   const payload = JSON.stringify({ contents: [{ parts }], generationConfig: { maxOutputTokens: maxTokens, responseMimeType: "application/json" } });
   const url = `${GEMINI_BASE}/models/${model}:generateContent?key=${key}`;
-  let r: Response | null = null;
-  for (let a = 0; a < 3; a++) {
-    r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload });
-    if (r.ok || (r.status !== 503 && r.status !== 429)) break;
-    await sleep(800 * (a + 1));
+  let lastErr = "net";
+  for (let a = 0; a < 4; a++) {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 45000);
+    try {
+      const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload, signal: ctrl.signal });
+      clearTimeout(to);
+      if (r.ok) {
+        const data = await r.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        return JSON.parse(text);
+      }
+      lastErr = "http-" + r.status;
+      // 4xx (salvo 429) son definitivos: no reintentar
+      if (r.status !== 429 && r.status < 500) throw new Error(lastErr);
+    } catch (e: any) {
+      clearTimeout(to);
+      lastErr = e?.message || "err";
+      if (lastErr.startsWith("http-4") && lastErr !== "http-429") throw e;
+    }
+    await sleep(700 * (a + 1));
   }
-  if (!r || !r.ok) throw new Error("ia-" + (r ? r.status : "net"));
-  const data = await r.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  return JSON.parse(text);
+  throw new Error("ia-agotado:" + lastErr);
 }
 
 export async function POST(req: NextRequest) {
@@ -92,7 +105,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Paso 1: extraer + clasificación inicial
-    const ext = await geminiJSON([{ text: EXTRACT_PROMPT }, { inline_data: { mime_type: mime, data: b64 } }], model, key, 8000);
+    const ext = await geminiJSON([{ text: EXTRACT_PROMPT }, { inline_data: { mime_type: mime, data: b64 } }], model, key, 5000);
     let items: any[] = Array.isArray(ext.items) ? ext.items : [];
     const cabecera = ext.cabecera || {};
     if (!items.length) return NextResponse.json({ cabecera, items: [] });
@@ -104,7 +117,7 @@ export async function POST(req: NextRequest) {
     const notasTxt = headings
       .map((h) => {
         const n = notas.get(h);
-        return n ? `Partida ${h.slice(0, 2)}.${h.slice(2, 4)} — ${n.titulo}\n${n.texto.slice(0, 2200)}` : "";
+        return n ? `Partida ${h.slice(0, 2)}.${h.slice(2, 4)} — ${n.titulo}\n${n.texto.slice(0, 1800)}` : "";
       })
       .filter(Boolean)
       .join("\n\n");
@@ -114,7 +127,7 @@ export async function POST(req: NextRequest) {
       i,
       descripcion: it.descripcion,
       modelo: it.modelo,
-      candidatos: (grupos.get(norm(it.subpartida).slice(0, 6)) || []).slice(0, 40).map((x) => ({ c: x.c, d: x.d })),
+      candidatos: (grupos.get(norm(it.subpartida).slice(0, 6)) || []).slice(0, 25).map((x) => ({ c: x.c, d: x.d })),
     }));
     const refinePrompt =
       REFINE_PROMPT +
@@ -123,7 +136,7 @@ export async function POST(req: NextRequest) {
       JSON.stringify(refineInput);
     let refined: any[] = [];
     try {
-      const rr = await geminiJSON([{ text: refinePrompt }], model, key, 8000);
+      const rr = await geminiJSON([{ text: refinePrompt }], model, key, 4000);
       refined = Array.isArray(rr.items) ? rr.items : [];
     } catch { refined = []; }
 
@@ -147,6 +160,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ cabecera, items });
   } catch {
-    return NextResponse.json({ error: "No se pudo procesar el invoice" }, { status: 502 });
+    return NextResponse.json(
+      { error: "El modelo de IA estuvo ocupado. Espera unos segundos e inténtalo de nuevo." },
+      { status: 502 },
+    );
   }
 }
