@@ -29,19 +29,23 @@ export async function POST(req: NextRequest) {
   const history = (body.messages ?? []).filter((m) => m && m.content).slice(-10);
   const messages: Msg[] = [{ role: "system", content: SYSTEM }, ...history];
 
-  try {
-    const r = await fetch(`${base}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify({ model, messages, temperature: 0.3, max_tokens: 700 }),
-    });
+  const payload = JSON.stringify({ model, messages, temperature: 0.3, max_tokens: 700 });
 
-    if (!r.ok) {
-      const detail = await r.text();
-      return NextResponse.json({ error: "Proveedor IA", detail: detail.slice(0, 300) }, { status: 502 });
+  try {
+    let r: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      r = await fetch(`${base}/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: payload,
+      });
+      if (r.ok || (r.status !== 503 && r.status !== 429)) break;
+      await new Promise((res) => setTimeout(res, 600 * (attempt + 1)));
+    }
+
+    if (!r || !r.ok) {
+      const detail = r ? await r.text() : "sin respuesta";
+      return NextResponse.json({ error: "Proveedor IA", detail: detail.slice(0, 200) }, { status: 502 });
     }
 
     const data = await r.json();

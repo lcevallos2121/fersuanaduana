@@ -7,7 +7,7 @@ import { buscarArancel, supabaseReady } from "@/lib/supabase";
 import { liquidar, usd, type Entrada } from "@/lib/tributos";
 import type { Arancel } from "@/lib/types";
 
-type Mode = "buscar" | "calcular" | "consultar";
+type Mode = "buscar" | "imagen" | "calcular" | "consultar";
 
 /* ---------- iconos ---------- */
 const I = {
@@ -21,6 +21,11 @@ const I = {
   search: (p: any) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" {...p}>
       <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
+    </svg>
+  ),
+  image: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" />
     </svg>
   ),
   calc: (p: any) => (
@@ -68,6 +73,28 @@ function Animated({ value, className }: { value: number; className?: string }) {
   return <span className={className}>{usd(disp)}</span>;
 }
 
+/* ---------- redimensiona la imagen antes de enviarla ---------- */
+function resizeImage(file: File, max = 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > h && w > max) { h = Math.round((h * max) / w); w = max; }
+      else if (h > max) { w = Math.round((w * max) / h); h = max; }
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const ctx = c.getContext("2d");
+      if (!ctx) { reject(new Error("no-ctx")); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("img-error")); };
+    img.src = url;
+  });
+}
+
 export default function Console({ userEmail, onLogout }: { userEmail?: string; onLogout?: () => void }) {
   const [mode, setMode] = useState<Mode>("buscar");
   const [query, setQuery] = useState("");
@@ -81,6 +108,12 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
   const [chatInput, setChatInput] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+
+  const [imgPreview, setImgPreview] = useState<string | null>(null);
+  const [imgNote, setImgNote] = useState("");
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgErr, setImgErr] = useState<string | null>(null);
+  const [imgRes, setImgRes] = useState<{ analisis: { producto: string; material: string; uso: string }; candidatos: Arancel[] } | null>(null);
 
   /* búsqueda con debounce */
   useEffect(() => {
@@ -130,6 +163,25 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
     } finally { setChatBusy(false); }
   }
 
+  async function handleImage(file: File) {
+    setImgErr(null); setImgRes(null);
+    let dataUrl: string;
+    try { dataUrl = await resizeImage(file); } catch { setImgErr("No se pudo leer la imagen."); return; }
+    setImgPreview(dataUrl);
+    setImgBusy(true);
+    try {
+      const r = await fetch("/api/clasificar-imagen", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: dataUrl, nota: imgNote }),
+      });
+      if (r.status === 503) { setImgErr("IA no configurada. Agrega AI_API_KEY en las variables de entorno."); return; }
+      const data = await r.json();
+      if (!r.ok) { setImgErr("No se pudo analizar la imagen. Inténtalo de nuevo."); return; }
+      setImgRes({ analisis: data.analisis, candidatos: data.candidatos || [] });
+    } catch { setImgErr("Error de conexión."); }
+    finally { setImgBusy(false); }
+  }
+
   const tributos = [
     { k: "Ad-valorem", v: liq.adValorem, c: "var(--cyan)" },
     { k: "FODINFA", v: liq.fodinfa, c: "var(--amber)" },
@@ -169,6 +221,9 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
           <button className="rail-btn" data-active={mode === "buscar"} onClick={() => setMode("buscar")} title="Clasificar">
             <I.search className="h-5 w-5" />
           </button>
+          <button className="rail-btn" data-active={mode === "imagen"} onClick={() => setMode("imagen")} title="Clasificar por imagen">
+            <I.image className="h-5 w-5" />
+          </button>
           <button className="rail-btn" data-active={mode === "calcular"} onClick={() => setMode("calcular")} title="Liquidar">
             <I.calc className="h-5 w-5" />
           </button>
@@ -186,7 +241,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
           {/* encabezado minimal */}
           <div className="flex items-center justify-between px-8 pt-6">
             <div className="mono text-xs tracking-[0.35em] text-[var(--muted)]">
-              FERSUANADUANA <span className="text-[var(--cyan)]">/</span> {mode === "buscar" ? "CLASIFICACIÓN" : mode === "calcular" ? "LIQUIDACIÓN" : "CONSULTA"}
+              FERSUANADUANA <span className="text-[var(--cyan)]">/</span> {mode === "buscar" ? "CLASIFICACIÓN" : mode === "imagen" ? "IMAGEN" : mode === "calcular" ? "LIQUIDACIÓN" : "CONSULTA"}
             </div>
             <div className="flex items-center gap-3">
               <span className="mono hidden text-[11px] text-[var(--muted)] sm:inline">ARANCEL 002-2023</span>
@@ -250,6 +305,64 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
                       </button>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ---- IMAGEN ---- */}
+          {mode === "imagen" && (
+            <div className="mx-auto flex h-[calc(100%-56px)] max-w-3xl flex-col px-8 pt-8">
+              <div className="grid gap-5 md:grid-cols-[230px_1fr]">
+                <div>
+                  <label className="hud hud-edge flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden p-2 text-center transition hover:border-[var(--line-strong)]">
+                    {imgPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={imgPreview} alt="producto" className="h-full w-full rounded-xl object-cover" />
+                    ) : (
+                      <>
+                        <I.image className="h-9 w-9 text-[var(--muted)]" />
+                        <span className="mono text-[11px] text-[var(--muted)]">Sube una foto del producto</span>
+                      </>
+                    )}
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImage(f); }} />
+                  </label>
+                  <input className="field mono mt-3 w-full px-3 py-2 text-xs" placeholder="detalle opcional (marca, material)…" value={imgNote} onChange={(e) => setImgNote(e.target.value)} />
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                  {imgBusy && (
+                    <div className="flex items-center gap-3 text-sm text-[var(--muted)]">
+                      <span className="dots"><i /><i /><i /></span> Analizando la imagen…
+                    </div>
+                  )}
+                  {imgErr && <p className="text-sm text-[var(--bad)]">{imgErr}</p>}
+                  {!imgBusy && !imgErr && !imgRes && (
+                    <p className="mono mt-16 text-center text-sm text-[var(--muted)]">La IA verá la foto y buscará la partida en el arancel.</p>
+                  )}
+                  {imgRes && (
+                    <div className="flex flex-col gap-3">
+                      <div className="hud hud-edge p-3 text-sm">
+                        <span className="font-semibold text-[var(--cyan)]">{imgRes.analisis.producto || "Producto"}</span>
+                        {(imgRes.analisis.material || imgRes.analisis.uso) && (
+                          <span className="text-[var(--muted)]"> · {[imgRes.analisis.material, imgRes.analisis.uso].filter(Boolean).join(" · ")}</span>
+                        )}
+                      </div>
+                      {imgRes.candidatos.length === 0 && (
+                        <p className="mono text-sm text-[var(--muted)]">Sin coincidencias claras; prueba el modo búsqueda.</p>
+                      )}
+                      {imgRes.candidatos.map((a, i) => (
+                        <div key={a.subpartida} className="row-result rise flex items-center gap-4 p-3" style={{ animationDelay: `${Math.min(i, 8) * 0.03}s` }} onClick={() => pick(a)}>
+                          <div className="mono text-base font-semibold text-[var(--cyan)]">{a.subpartida}</div>
+                          <div className="min-w-0 flex-1 truncate text-sm text-[var(--fg)]">{a.descripcion}</div>
+                          <div className="mono text-sm text-[var(--amber)]">{a.ad_valorem != null ? `${a.ad_valorem}%` : "—"}</div>
+                          <button className="rail-btn !h-8 !w-8 text-[var(--muted)] hover:text-[var(--cyan)]" title="Liquidar" onClick={(e) => { e.stopPropagation(); liquidarDesde(a); }}>
+                            <I.bolt className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
