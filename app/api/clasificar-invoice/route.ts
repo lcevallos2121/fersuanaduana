@@ -8,10 +8,10 @@ const norm = (c: string) => (c || "").replace(/\D/g, "");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const EXTRACT_PROMPT = `Eres un agente de aduana experto de Ecuador (SENAE). Analiza este invoice comercial de importación.
-1) Extrae la cabecera: numero_factura, fecha, proveedor, pais_origen, pais_embarque, incoterm, moneda, lugar_entrega.
+1) Extrae la cabecera: numero_factura, fecha, proveedor (vendedor), comprador (el importador/cliente que recibe la mercancía), pais_origen, pais_embarque, incoterm, moneda, lugar_entrega.
 2) Extrae CADA ítem: descripcion, modelo, marca, cantidad, precio_unitario, precio_total.
 3) Propón para cada ítem la subpartida NANDINA de Ecuador (10 dígitos, solo números) aplicando las 6 Reglas Generales de Interpretación.
-Devuelve SOLO JSON: {"cabecera":{"numero_factura":"","fecha":"","proveedor":"","pais_origen":"","pais_embarque":"","incoterm":"","moneda":"","lugar_entrega":""},"items":[{"descripcion":"","modelo":"","marca":"","cantidad":0,"precio_unitario":0,"precio_total":0,"subpartida":""}]}`;
+Devuelve SOLO JSON: {"cabecera":{"numero_factura":"","fecha":"","proveedor":"","comprador":"","pais_origen":"","pais_embarque":"","incoterm":"","moneda":"","lugar_entrega":""},"items":[{"descripcion":"","modelo":"","marca":"","cantidad":0,"precio_unitario":0,"precio_total":0,"subpartida":""}]}`;
 
 const REFINE_PROMPT = `Eres un clasificador arancelario experto de Ecuador. Para cada ítem tienes su descripción y una lista de subpartidas OFICIALES candidatas del arancel (código de 10 dígitos "c" y su texto "d").
 Elige para cada ítem la subpartida MÁS ESPECÍFICA que corresponda según las 6 Reglas Generales de Interpretación. Cuando se incluyan NOTAS EXPLICATIVAS oficiales de la partida, úsalas como criterio principal para decidir si el producto pertenece o se excluye de esa partida. Prefiere SIEMPRE la subpartida específica sobre las de "los demás"; usa "los demás" solo si ninguna específica aplica. Elige un código que esté en la lista de candidatos.

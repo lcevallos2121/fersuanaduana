@@ -62,6 +62,7 @@ export default function InvoiceTool() {
     const { error } = await supabase.from("declaraciones").insert({
       numero_factura: cab?.numero_factura || null,
       proveedor: cab?.proveedor || null,
+      cliente: cab?.comprador || null,
       cabecera: cab || {},
       items,
     });

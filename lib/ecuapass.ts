@@ -18,6 +18,7 @@ export type Cabecera = {
   numero_factura?: string;
   fecha?: string;
   proveedor?: string;
+  comprador?: string;
   pais_origen?: string;
   pais_embarque?: string;
   incoterm?: string;
