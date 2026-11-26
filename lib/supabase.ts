@@ -22,3 +22,19 @@ export async function buscarArancel(term: string, max = 20): Promise<Arancel[]> 
   if (error) throw error;
   return (data ?? []) as Arancel[];
 }
+
+export type Restriccion = { tipo: string; institucion: string; documento: string };
+
+/** Restricciones (control previo / prohibida) para una lista de subpartidas. */
+export async function restriccionesDe(subs: string[]): Promise<Record<string, Restriccion>> {
+  if (!supabase || !subs.length) return {};
+  const lista = Array.from(new Set(subs.filter(Boolean)));
+  const { data, error } = await supabase
+    .from("restricciones")
+    .select("subpartida,tipo,institucion,documento")
+    .in("subpartida", lista);
+  if (error) return {};
+  const map: Record<string, Restriccion> = {};
+  (data ?? []).forEach((r: any) => { map[r.subpartida] = { tipo: r.tipo, institucion: r.institucion, documento: r.documento }; });
+  return map;
+}

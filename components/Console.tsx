@@ -5,7 +5,7 @@ import HudBackground from "./HudBackground";
 import Onboarding from "./Onboarding";
 import InvoiceTool from "./InvoiceTool";
 import HistorialTool from "./HistorialTool";
-import { buscarArancel, supabaseReady } from "@/lib/supabase";
+import { buscarArancel, restriccionesDe, supabaseReady, type Restriccion } from "@/lib/supabase";
 import { liquidar, usd, type Entrada } from "@/lib/tributos";
 import type { Arancel } from "@/lib/types";
 
@@ -127,6 +127,9 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
   const [imgErr, setImgErr] = useState<string | null>(null);
   const [imgRes, setImgRes] = useState<{ analisis: { producto: string; material: string; uso: string }; candidatos: Arancel[] } | null>(null);
 
+  const [restrMap, setRestrMap] = useState<Record<string, Restriccion>>({});
+  const [detalle, setDetalle] = useState<Arancel | null>(null);
+
   /* búsqueda con debounce */
   useEffect(() => {
     if (!supabaseReady) { setSearchErr("Conecta tu Supabase (variables de entorno)."); return; }
@@ -138,6 +141,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
       try {
         const data = await buscarArancel(q, 25);
         setResults(data);
+        restriccionesDe(data.map((x) => x.subpartida)).then((rs) => setRestrMap((p) => ({ ...p, ...rs })));
       } catch {
         setSearchErr("Error de búsqueda. Revisa el esquema SQL en Supabase.");
         setResults([]);
@@ -189,7 +193,9 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
       if (r.status === 503) { setImgErr("IA no configurada. Agrega AI_API_KEY en las variables de entorno."); return; }
       const data = await r.json();
       if (!r.ok) { setImgErr("No se pudo analizar la imagen. Inténtalo de nuevo."); return; }
-      setImgRes({ analisis: data.analisis, candidatos: data.candidatos || [] });
+      const cands = (data.candidatos || []) as Arancel[];
+      setImgRes({ analisis: data.analisis, candidatos: cands });
+      restriccionesDe(cands.map((x) => x.subpartida)).then((rs) => setRestrMap((p) => ({ ...p, ...rs })));
     } catch { setImgErr("Error de conexión."); }
     finally { setImgBusy(false); }
   }
@@ -215,6 +221,41 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
     <main className="relative h-screen w-screen overflow-hidden">
       <HudBackground />
       <Onboarding />
+
+      {detalle && (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-[rgba(2,6,10,0.82)] px-6 backdrop-blur-sm" onClick={() => setDetalle(null)}>
+          <div className="hud hud-edge glow rise w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="mono text-2xl font-bold text-[var(--cyan)]">{detalle.subpartida}</div>
+                <div className="mt-1 text-sm text-[var(--fg)]">{detalle.descripcion}</div>
+              </div>
+              <button onClick={() => setDetalle(null)} className="rail-btn !h-8 !w-8 text-[var(--muted)] hover:text-[var(--fg)]">✕</button>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="hud p-3"><div className="mono text-[10px] tracking-wider text-[var(--muted)]">AD-VALOREM</div><div className="text-2xl font-bold text-[var(--amber)]">{detalle.ad_valorem != null ? `${detalle.ad_valorem}%` : "—"}</div></div>
+              <div className="hud p-3"><div className="mono text-[10px] tracking-wider text-[var(--muted)]">OTROS TRIBUTOS</div><div className="mt-1 text-sm text-[var(--fg)]">FODINFA 0,5% · IVA 15%{detalle.especifico ? ` · ${detalle.especifico}` : ""}</div></div>
+            </div>
+            {(() => {
+              const r = restrMap[detalle.subpartida];
+              if (!r) return <div className="mt-3 rounded-lg border border-[var(--line)] bg-[rgba(70,227,155,0.08)] p-3 text-sm text-[var(--good)]">✓ Sin restricciones de control previo registradas (nómina COMEX 009-2022).</div>;
+              if (r.tipo === "prohibida") return <div className="mt-3 rounded-lg border border-[var(--line-strong)] bg-[rgba(255,107,107,0.1)] p-3 text-sm font-semibold text-[var(--bad)]">🚫 PROHIBIDA IMPORTACIÓN (Anexo II, COMEX 009-2022)</div>;
+              return (
+                <div className="mt-3 rounded-lg border border-[var(--line-strong)] bg-[rgba(255,179,71,0.09)] p-3 text-sm">
+                  <div className="font-semibold text-[var(--amber)]">⚠ Requiere control previo</div>
+                  <div className="mt-1 text-[var(--fg)]"><b>Entidad:</b> {r.institucion}</div>
+                  <div className="text-[var(--fg)]"><b>Documento:</b> {r.documento}</div>
+                </div>
+              );
+            })()}
+            <p className="mono mt-3 text-[10px] text-[var(--muted)]">Referencia — verifica en el SENAE / ECUAPASS.</p>
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => { pick(detalle); setMode("calcular"); setDetalle(null); }} className="rounded-xl bg-[var(--cyan)] px-5 py-2.5 font-semibold text-[var(--bg)] transition hover:brightness-110">Usar en calculadora</button>
+              <button onClick={() => setDetalle(null)} className="rounded-xl border border-[var(--line)] px-5 py-2.5 font-semibold text-[var(--fg)] transition hover:border-[var(--cyan)]">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* aviso PC */}
       <div className="fixed inset-0 z-50 hidden max-[940px]:flex items-center justify-center bg-[var(--bg)] px-8 text-center">
@@ -294,7 +335,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
                 {searchErr && <p className="mono mt-10 text-center text-sm text-[var(--bad)]">{searchErr}</p>}
                 {!searchErr && query.trim().length < 2 && (
                   <p className="mono mt-16 text-center text-sm text-[var(--muted)]">
-                    6.536 subpartidas · busca por texto o código NANDINA
+                    7.449 subpartidas · busca por texto o código · toca un resultado para ver restricciones
                   </p>
                 )}
                 {!searchErr && query.trim().length >= 2 && !searching && results.length === 0 && (
@@ -307,7 +348,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
                       className="row-result rise flex items-center gap-4 p-3"
                       data-sel={selected?.subpartida === a.subpartida}
                       style={{ animationDelay: `${Math.min(i, 10) * 0.025}s` }}
-                      onClick={() => pick(a)}
+                      onClick={() => setDetalle(a)}
                     >
                       <div className="mono text-base font-semibold text-[var(--cyan)]">{a.subpartida}</div>
                       <div className="min-w-0 flex-1 truncate text-[15px] text-[var(--fg)]">{a.descripcion}</div>
@@ -315,6 +356,11 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
                         <span className="text-[var(--amber)]">{a.ad_valorem != null ? `${a.ad_valorem}%` : "—"}</span>
                         {a.especifico && <span className="ml-1 text-[10px] text-[var(--muted)]">+esp</span>}
                       </div>
+                      {restrMap[a.subpartida] && (
+                        <span className="text-sm" title={restrMap[a.subpartida].tipo === "prohibida" ? "Prohibida importación" : `Control previo · ${restrMap[a.subpartida].institucion}`}>
+                          {restrMap[a.subpartida].tipo === "prohibida" ? "🚫" : "⚠"}
+                        </span>
+                      )}
                       <button
                         className="rail-btn !h-8 !w-8 text-[var(--muted)] hover:text-[var(--cyan)]"
                         title="Liquidar"
@@ -371,10 +417,15 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
                         <p className="mono text-sm text-[var(--muted)]">Sin coincidencias claras; prueba el modo búsqueda.</p>
                       )}
                       {imgRes.candidatos.map((a, i) => (
-                        <div key={a.subpartida} className="row-result rise flex items-center gap-4 p-3" style={{ animationDelay: `${Math.min(i, 8) * 0.03}s` }} onClick={() => pick(a)}>
+                        <div key={a.subpartida} className="row-result rise flex items-center gap-4 p-3" style={{ animationDelay: `${Math.min(i, 8) * 0.03}s` }} onClick={() => setDetalle(a)}>
                           <div className="mono text-base font-semibold text-[var(--cyan)]">{a.subpartida}</div>
                           <div className="min-w-0 flex-1 truncate text-sm text-[var(--fg)]">{a.descripcion}</div>
                           <div className="mono text-sm text-[var(--amber)]">{a.ad_valorem != null ? `${a.ad_valorem}%` : "—"}</div>
+                          {restrMap[a.subpartida] && (
+                            <span className="text-sm" title={restrMap[a.subpartida].tipo === "prohibida" ? "Prohibida importación" : `Control previo · ${restrMap[a.subpartida].institucion}`}>
+                              {restrMap[a.subpartida].tipo === "prohibida" ? "🚫" : "⚠"}
+                            </span>
+                          )}
                           <button className="rail-btn !h-8 !w-8 text-[var(--muted)] hover:text-[var(--cyan)]" title="Liquidar" onClick={(e) => { e.stopPropagation(); liquidarDesde(a); }}>
                             <I.bolt className="h-4 w-4" />
                           </button>
