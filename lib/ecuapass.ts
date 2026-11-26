@@ -120,9 +120,10 @@ function buildRow(it: ItemClasificado, i: number, cab: Cabecera): (string | numb
 }
 
 export function descargarExcel(items: ItemClasificado[], cab: Cabecera) {
-  // la fila de datos de ECUAPASS ocupa las columnas A..BS (71); al final, en una
-  // columna aparte, va la nota explicativa de la IA (borrarla antes de subir).
-  const header = [...HEADERS, "NOTA EXPLICATIVA (borrar antes de subir)"];
+  // ECUAPASS lee los datos por posición empezando en la Subpartida, así que el
+  // encabezado también arranca en la Subpartida (sin "H01. Numero de item") para
+  // que cada rótulo quede justo encima de su dato. Al final, la nota explicativa.
+  const header = [...HEADERS.slice(1), "NOTA EXPLICATIVA (borrar antes de subir)"];
   const data = items.map((it, i) => [...buildRow(it, i, cab), it.justificacion || ""]);
   const aoa: (string | number)[][] = [header, ...data];
   const ws = XLSX.utils.aoa_to_sheet(aoa);
