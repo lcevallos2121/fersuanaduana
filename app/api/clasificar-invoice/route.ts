@@ -53,12 +53,12 @@ async function rpcPrefix(url: string, key: string, prefix: string) {
   }
 }
 
-async function gruposCandidatos(items: any[]) {
+async function gruposCandidatos(codes: string[]) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const map = new Map<string, { c: string; d: string; adv: number | null }[]>();
   if (!url || !key) return map;
-  const pref6 = Array.from(new Set(items.map((i) => norm(i.subpartida).slice(0, 6)).filter((p) => p.length === 6)));
+  const pref6 = Array.from(new Set(codes.map((c) => norm(c).slice(0, 6)).filter((p) => p.length === 6)));
   await Promise.all(
     pref6.map(async (p) => {
       const rows = await rpcPrefix(url, key, p);
@@ -93,7 +93,7 @@ async function buscarMemoria(term: string) {
     const r = await fetch(`${url}/rest/v1/rpc/buscar_memoria`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ term: term.slice(0, 200), max_results: 4 }),
+      body: JSON.stringify({ term: term.slice(0, 200), max_results: 8 }),
     });
     return r.ok ? ((await r.json()) as any[]) : [];
   } catch {
@@ -150,10 +150,14 @@ export async function POST(req: NextRequest) {
     if (!items.length) return NextResponse.json({ cabecera, items: [] });
 
     // candidatos reales por grupo + notas explicativas de las partidas
-    const grupos = await gruposCandidatos(items);
+    const memorias = await Promise.all(items.map((it) => buscarMemoria(`${it.descripcion || ""} ${it.modelo || ""}`)));
+    const probeCodes = [
+      ...items.map((it: any) => String(it.subpartida || "")),
+      ...memorias.flatMap((ms: any[]) => (ms[0] ? [String(ms[0].subpartida)] : [])),
+    ];
+    const grupos = await gruposCandidatos(probeCodes);
     const headings = Array.from(new Set(items.map((it) => norm(it.subpartida).slice(0, 4)).filter((h) => h.length === 4)));
     const notas = await fetchNotas(headings);
-    const memorias = await Promise.all(items.map((it) => buscarMemoria(`${it.descripcion || ""} ${it.modelo || ""}`)));
     const notasTxt = headings
       .map((h) => {
         const n = notas.get(h);
@@ -183,7 +187,17 @@ export async function POST(req: NextRequest) {
 
     items = items.map((it, idx) => {
       const rf = refined.find((r) => r.i === idx) || {};
-      const code = rf.subpartida ? String(rf.subpartida) : it.subpartida;
+      const mems = (memorias[idx] || []) as any[];
+      // voto por mayoría: la agencia a veces clasificó el mismo producto de varias formas;
+      // se usa la subpartida con más respaldo (suma de similitudes) entre los parecidos.
+      const tally: Record<string, number> = {};
+      mems.filter((m) => m.score >= 0.45).forEach((m) => {
+        const s = String(m.subpartida);
+        tally[s] = (tally[s] || 0) + m.score;
+      });
+      const dominante = Object.entries(tally).sort((a, b) => b[1] - a[1])[0];
+      const usarMem = Boolean(dominante && mems[0] && mems[0].score >= 0.5);
+      const code = usarMem ? dominante[0] : rf.subpartida ? String(rf.subpartida) : it.subpartida;
       const d = norm(code);
       const grp = grupos.get(d.slice(0, 6)) || [];
       const exact = grp.find((x) => x.c === d);
@@ -191,8 +205,11 @@ export async function POST(req: NextRequest) {
       return {
         ...it,
         subpartida: code,
-        regla: rf.regla || it.regla || "",
-        justificacion: rf.justificacion || it.justificacion || "",
+        fuente: usarMem ? "historial" : "ia",
+        regla: usarMem ? "Historial" : rf.regla || it.regla || "",
+        justificacion: usarMem
+          ? `Según el historial de la agencia: producto igual o muy parecido ya clasificado en esta subpartida.`
+          : rf.justificacion || it.justificacion || "",
         arancel_oficial: near ? near.d : null,
         ad_valorem: near ? near.adv : null,
         exacto: !!exact,

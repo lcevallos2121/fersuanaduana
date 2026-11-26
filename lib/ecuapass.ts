@@ -13,6 +13,7 @@ export type ItemClasificado = {
   arancel_oficial?: string | null; // descripción oficial si existe en la base
   ad_valorem?: number | null;
   restriccion?: { tipo: string; institucion: string; documento: string } | null;
+  fuente?: string; // 'historial' (memoria de la agencia) | 'ia'
 };
 
 export type Cabecera = {

@@ -206,6 +206,9 @@ export default function InvoiceTool() {
                     <td className="px-2 py-2">
                       <input value={it.subpartida || ""} onChange={(e) => editSub(i, e.target.value)}
                         className="field mono w-[120px] px-2 py-1 text-[13px] text-[var(--cyan)]" />
+                      {it.fuente === "historial" && (
+                        <div className="mt-0.5 inline-block rounded bg-[rgba(56,225,255,0.12)] px-1 text-[10px] font-semibold text-[var(--cyan)]" title={it.justificacion}>🧠 según historial</div>
+                      )}
                       {it.arancel_oficial
                         ? <div className="mt-0.5 max-w-[150px] truncate text-[10px] text-[var(--good)]" title={it.arancel_oficial}>✓ {it.arancel_oficial}</div>
                         : <div className="mt-0.5 text-[10px] text-[var(--amber)]">⚠ revisar en arancel</div>}
