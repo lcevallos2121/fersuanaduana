@@ -33,9 +33,11 @@ export default function InvoiceTool() {
 
   async function onFile(file: File) {
     if (!file) return;
-    if (file.size > 9 * 1024 * 1024) { setErr("El archivo supera 9 MB."); return; }
-    setErr(null); setItems([]); setCab(null); setFileName(file.name); setGuardado("idle");
     const esExcel = /\.(xlsx|xls|csv)$/i.test(file.name) || /sheet|excel|csv/i.test(file.type);
+    // el PDF/imagen se envía completo (límite 9 MB); el Excel solo se lee su texto (límite amplio)
+    if (!esExcel && file.size > 9 * 1024 * 1024) { setErr("El PDF o imagen supera 9 MB."); return; }
+    if (esExcel && file.size > 40 * 1024 * 1024) { setErr("El Excel supera 40 MB."); return; }
+    setErr(null); setItems([]); setCab(null); setFileName(file.name); setGuardado("idle");
     let payload: { file?: string; mime?: string; texto?: string };
     try {
       payload = esExcel ? { texto: await excelATexto(file) } : { file: await fileToDataURL(file), mime: file.type };
