@@ -263,6 +263,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
             </div>
             <div className="flex items-center gap-3">
               <span className="mono hidden text-[11px] text-[var(--muted)] sm:inline">ARANCEL 002-2023</span>
+              <a href="/admin" className="mono text-[11px] text-[var(--muted)] transition hover:text-[var(--cyan)]">Admin</a>
               {userEmail && (
                 <span className="mono max-w-[160px] truncate text-[11px] text-[var(--muted)]" title={userEmail}>{userEmail}</span>
               )}

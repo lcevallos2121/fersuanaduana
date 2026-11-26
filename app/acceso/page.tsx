@@ -13,6 +13,12 @@ export default function AccesoPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: "error" | "ok"; text: string } | null>(null);
 
+  function destino() {
+    if (typeof window === "undefined") return "/app";
+    const n = new URLSearchParams(window.location.search).get("next");
+    return n && n.startsWith("/") ? n : "/app";
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!supabaseReady || !supabase) {
@@ -26,7 +32,7 @@ export default function AccesoPage() {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         if (data.session) {
-          router.push("/app");
+          router.push(destino());
         } else {
           setMsg({ type: "ok", text: "Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión." });
           setTab("login");
@@ -34,7 +40,7 @@ export default function AccesoPage() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.push("/app");
+        router.push(destino());
       }
     } catch (err: any) {
       const raw = String(err?.message || "");
