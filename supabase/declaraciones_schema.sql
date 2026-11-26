@@ -10,9 +10,11 @@ create table if not exists public.declaraciones (
   created_at     timestamptz not null default now(),
   numero_factura text,
   proveedor      text,
+  cliente        text,
   cabecera       jsonb,
   items          jsonb
 );
+alter table public.declaraciones add column if not exists cliente text;
 
 alter table public.declaraciones enable row level security;
 

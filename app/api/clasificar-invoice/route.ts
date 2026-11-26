@@ -13,8 +13,9 @@ const EXTRACT_PROMPT = `Eres un agente de aduana experto de Ecuador (SENAE). Ana
 3) Propón para cada ítem la subpartida NANDINA de Ecuador (10 dígitos, solo números) aplicando las 6 Reglas Generales de Interpretación.
 Devuelve SOLO JSON: {"cabecera":{"numero_factura":"","fecha":"","proveedor":"","comprador":"","pais_origen":"","pais_embarque":"","incoterm":"","moneda":"","lugar_entrega":""},"items":[{"descripcion":"","modelo":"","marca":"","cantidad":0,"precio_unitario":0,"precio_total":0,"subpartida":""}]}`;
 
-const REFINE_PROMPT = `Eres un clasificador arancelario experto de Ecuador. Para cada ítem tienes su descripción y una lista de subpartidas OFICIALES candidatas del arancel (código de 10 dígitos "c" y su texto "d").
-Elige para cada ítem la subpartida MÁS ESPECÍFICA que corresponda según las 6 Reglas Generales de Interpretación. Cuando se incluyan NOTAS EXPLICATIVAS oficiales de la partida, úsalas como criterio principal para decidir si el producto pertenece o se excluye de esa partida. Prefiere SIEMPRE la subpartida específica sobre las de "los demás"; usa "los demás" solo si ninguna específica aplica. Elige un código que esté en la lista de candidatos.
+const REFINE_PROMPT = `Eres un clasificador arancelario experto de Ecuador. Para cada ítem tienes su descripción, posibles "previos" (clasificaciones que ESTA agencia de aduana ya hizo para productos iguales o muy parecidos) y una lista de subpartidas OFICIALES candidatas del arancel (código "c" y texto "d").
+PRIORIDAD 1: Si en "previos" hay un producto que es claramente el MISMO (o prácticamente el mismo) que el ítem, usa esa subpartida — así clasifica la agencia y debe mantenerse la consistencia (salvo que sea evidentemente incorrecta).
+PRIORIDAD 2: Si no hay previo aplicable, elige la subpartida MÁS ESPECÍFICA según las 6 Reglas Generales de Interpretación; usa las NOTAS EXPLICATIVAS oficiales como criterio para incluir/excluir el producto de la partida. Prefiere SIEMPRE la subpartida específica sobre las de "los demás". Elige un código que esté en la lista de candidatos.
 Devuelve SOLO JSON: {"items":[{"i":0,"subpartida":"<10 dígitos del código elegido>","regla":"regla(s) aplicada(s)","justificacion":"explicación clara de por qué ese producto va en esa partida, citando la nota explicativa si aplica, 1-2 frases"}]}.`;
 
 async function rpcPrefix(url: string, key: string, prefix: string) {
@@ -60,6 +61,22 @@ async function fetchNotas(headings: string[]) {
     rows.forEach((x) => map.set(x.partida, { titulo: x.titulo || "", texto: x.texto || "" }));
   } catch {}
   return map;
+}
+
+async function buscarMemoria(term: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key || !term.trim()) return [];
+  try {
+    const r = await fetch(`${url}/rest/v1/rpc/buscar_memoria`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ term: term.slice(0, 200), max_results: 4 }),
+    });
+    return r.ok ? ((await r.json()) as any[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 async function geminiJSON(parts: any[], model: string, key: string, maxTokens: number) {
@@ -114,6 +131,7 @@ export async function POST(req: NextRequest) {
     const grupos = await gruposCandidatos(items);
     const headings = Array.from(new Set(items.map((it) => norm(it.subpartida).slice(0, 4)).filter((h) => h.length === 4)));
     const notas = await fetchNotas(headings);
+    const memorias = await Promise.all(items.map((it) => buscarMemoria(`${it.descripcion || ""} ${it.modelo || ""}`)));
     const notasTxt = headings
       .map((h) => {
         const n = notas.get(h);
@@ -127,6 +145,7 @@ export async function POST(req: NextRequest) {
       i,
       descripcion: it.descripcion,
       modelo: it.modelo,
+      previos: (memorias[i] || []).filter((m: any) => m.score >= 0.35).slice(0, 3).map((m: any) => ({ d: (m.descripcion || "") + (m.modelo ? " / " + m.modelo : ""), sub: m.subpartida })),
       candidatos: (grupos.get(norm(it.subpartida).slice(0, 6)) || []).slice(0, 25).map((x) => ({ c: x.c, d: x.d })),
     }));
     const refinePrompt =

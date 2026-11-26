@@ -66,6 +66,20 @@ export default function InvoiceTool() {
       cabecera: cab || {},
       items,
     });
+    // el sistema aprende: cada ítem clasificado alimenta la memoria (cerebro)
+    if (!error) {
+      try {
+        await supabase.from("memoria").insert(
+          items.filter((it) => it.descripcion && it.subpartida).map((it) => ({
+            descripcion: it.descripcion,
+            modelo: it.modelo || null,
+            marca: it.marca || null,
+            subpartida: it.subpartida,
+            cliente: cab?.comprador || null,
+          })),
+        );
+      } catch {}
+    }
     setGuardado(error ? "idle" : "ok");
   }
 
