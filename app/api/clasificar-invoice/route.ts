@@ -5,6 +5,28 @@ export const maxDuration = 60;
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const norm = (c: string) => (c || "").replace(/\D/g, "");
+const dot = (c: string) => {
+  const d = norm(c);
+  return d.length >= 8 ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6, 8)}.${d.slice(8, 10) || "00"}` : c;
+};
+
+async function fetchRestricciones(subs: string[]) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const map = new Map<string, { tipo: string; institucion: string; documento: string }>();
+  const lista = Array.from(new Set(subs.filter(Boolean)));
+  if (!url || !key || !lista.length) return map;
+  try {
+    const inList = lista.map((s) => `"${s}"`).join(",");
+    const r = await fetch(`${url}/rest/v1/restricciones?subpartida=in.(${inList})&select=subpartida,tipo,institucion,documento`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!r.ok) return map;
+    const rows = (await r.json()) as any[];
+    rows.forEach((x) => map.set(x.subpartida, { tipo: x.tipo, institucion: x.institucion, documento: x.documento }));
+  } catch {}
+  return map;
+}
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const EXTRACT_PROMPT = `Eres un agente de aduana experto de Ecuador (SENAE). Analiza este invoice comercial de importación.
@@ -176,6 +198,9 @@ export async function POST(req: NextRequest) {
         exacto: !!exact,
       };
     });
+
+    const restr = await fetchRestricciones(items.map((it) => dot(it.subpartida)));
+    items = items.map((it) => ({ ...it, restriccion: restr.get(dot(it.subpartida)) || null }));
 
     return NextResponse.json({ cabecera, items });
   } catch {

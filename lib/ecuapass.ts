@@ -12,6 +12,7 @@ export type ItemClasificado = {
   justificacion?: string;
   arancel_oficial?: string | null; // descripción oficial si existe en la base
   ad_valorem?: number | null;
+  restriccion?: { tipo: string; institucion: string; documento: string } | null;
 };
 
 export type Cabecera = {

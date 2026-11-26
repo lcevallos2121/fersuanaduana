@@ -209,6 +209,16 @@ export default function InvoiceTool() {
                       {it.arancel_oficial
                         ? <div className="mt-0.5 max-w-[150px] truncate text-[10px] text-[var(--good)]" title={it.arancel_oficial}>✓ {it.arancel_oficial}</div>
                         : <div className="mt-0.5 text-[10px] text-[var(--amber)]">⚠ revisar en arancel</div>}
+                      {it.restriccion && (
+                        <div
+                          className={`mt-0.5 max-w-[160px] truncate rounded px-1 text-[10px] font-semibold ${it.restriccion.tipo === "prohibida" ? "bg-[rgba(255,107,107,0.14)] text-[var(--bad)]" : "bg-[rgba(255,179,71,0.14)] text-[var(--amber)]"}`}
+                          title={`${it.restriccion.tipo === "prohibida" ? "PROHIBIDA IMPORTACIÓN" : "CONTROL PREVIO"} · ${it.restriccion.institucion} · ${it.restriccion.documento}`}
+                        >
+                          {it.restriccion.tipo === "prohibida"
+                            ? "🚫 Prohibida importación"
+                            : `⚠ Control previo · ${it.restriccion.institucion.split(",").pop()?.trim() || it.restriccion.institucion}`}
+                        </div>
+                      )}
                     </td>
                     <td className="mono px-2 py-2 text-right text-[var(--amber)]">{it.ad_valorem != null ? `${it.ad_valorem}%` : "—"}</td>
                     <td className="mono px-2 py-2 text-[11px] text-[var(--muted)]">{it.regla || "—"}</td>
