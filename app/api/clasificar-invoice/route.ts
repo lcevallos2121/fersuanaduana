@@ -135,17 +135,23 @@ export async function POST(req: NextRequest) {
   const model = process.env.AI_MODEL || "gemini-flash-lite-latest";
   if (!key) return NextResponse.json({ error: "IA no configurada" }, { status: 503 });
 
-  let body: { file?: string; mime?: string };
+  let body: { file?: string; mime?: string; texto?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 }); }
-  if (!body.file) return NextResponse.json({ error: "Falta el archivo" }, { status: 400 });
+  if (!body.file && !body.texto) return NextResponse.json({ error: "Falta el archivo" }, { status: 400 });
 
-  const comma = body.file.indexOf(",");
-  const b64 = comma >= 0 ? body.file.slice(comma + 1) : body.file;
-  const mime = body.mime || (body.file.startsWith("data:") ? body.file.slice(5, comma).split(";")[0] : "application/pdf");
+  let parts: any[];
+  if (body.texto && body.texto.trim()) {
+    parts = [{ text: EXTRACT_PROMPT + "\n\nContenido del invoice (extraído de un Excel; cada fila es un ítem):\n" + body.texto.slice(0, 30000) }];
+  } else {
+    const comma = body.file!.indexOf(",");
+    const b64 = comma >= 0 ? body.file!.slice(comma + 1) : body.file!;
+    const mime = body.mime || (body.file!.startsWith("data:") ? body.file!.slice(5, comma).split(";")[0] : "application/pdf");
+    parts = [{ text: EXTRACT_PROMPT }, { inline_data: { mime_type: mime, data: b64 } }];
+  }
 
   try {
     // Paso 1: extraer + clasificación inicial
-    const ext = await geminiJSON([{ text: EXTRACT_PROMPT }, { inline_data: { mime_type: mime, data: b64 } }], model, key, 5000);
+    const ext = await geminiJSON(parts, model, key, 16000);
     let items: any[] = Array.isArray(ext.items) ? ext.items : [];
     const cabecera = ext.cabecera || {};
     if (!items.length) return NextResponse.json({ cabecera, items: [] });
@@ -182,7 +188,7 @@ export async function POST(req: NextRequest) {
       JSON.stringify(refineInput);
     let refined: any[] = [];
     try {
-      const rr = await geminiJSON([{ text: refinePrompt }], model, key, 4000);
+      const rr = await geminiJSON([{ text: refinePrompt }], model, key, 12000);
       refined = Array.isArray(rr.items) ? rr.items : [];
     } catch { refined = []; }
 

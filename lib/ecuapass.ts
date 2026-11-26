@@ -178,3 +178,14 @@ export function descargarExcel(items: ItemClasificado[], cab: Cabecera) {
   const nombre = `declaracion_${(cab.numero_factura || "ecuapass").replace(/\W+/g, "")}.xlsx`;
   XLSX.writeFile(wb, nombre);
 }
+
+/** Lee un invoice en Excel/CSV y lo convierte a texto (CSV) para clasificar. */
+export async function excelATexto(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+  let out = "";
+  wb.SheetNames.forEach((name) => {
+    out += `# Hoja: ${name}\n` + XLSX.utils.sheet_to_csv(wb.Sheets[name]) + "\n";
+  });
+  return out;
+}

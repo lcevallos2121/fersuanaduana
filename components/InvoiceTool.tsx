@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { descargarExcel, type ItemClasificado, type Cabecera } from "@/lib/ecuapass";
+import { descargarExcel, excelATexto, type ItemClasificado, type Cabecera } from "@/lib/ecuapass";
 
 const PLAN_KEY = "fersua-plan";
 function getPlan(): string { try { return localStorage.getItem(PLAN_KEY) || "free"; } catch { return "free"; } }
@@ -35,13 +35,16 @@ export default function InvoiceTool() {
     if (!file) return;
     if (file.size > 9 * 1024 * 1024) { setErr("El archivo supera 9 MB."); return; }
     setErr(null); setItems([]); setCab(null); setFileName(file.name); setGuardado("idle");
-    let dataUrl: string;
-    try { dataUrl = await fileToDataURL(file); } catch { setErr("No se pudo leer el archivo."); return; }
+    const esExcel = /\.(xlsx|xls|csv)$/i.test(file.name) || /sheet|excel|csv/i.test(file.type);
+    let payload: { file?: string; mime?: string; texto?: string };
+    try {
+      payload = esExcel ? { texto: await excelATexto(file) } : { file: await fileToDataURL(file), mime: file.type };
+    } catch { setErr("No se pudo leer el archivo."); return; }
     setBusy(true);
     try {
       const r = await fetch("/api/clasificar-invoice", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file: dataUrl, mime: file.type }),
+        body: JSON.stringify(payload),
       });
       const data = await r.json().catch(() => ({}));
       if (r.status === 503) { setErr("IA no configurada. Agrega AI_API_KEY en Vercel."); return; }
@@ -147,8 +150,8 @@ export default function InvoiceTool() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[var(--cyan)] px-5 py-2.5 font-semibold text-[var(--bg)] transition hover:brightness-110">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5-5 5 5M12 5v12" /></svg>
-          Subir invoice (PDF o imagen)
-          <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
+          Subir invoice (PDF, imagen o Excel)
+          <input type="file" accept="application/pdf,image/*,.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
         </label>
         {items.length > 0 && (
           <div className="flex items-center gap-2">
