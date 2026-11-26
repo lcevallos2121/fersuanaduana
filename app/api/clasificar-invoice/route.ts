@@ -38,7 +38,8 @@ Devuelve SOLO JSON: {"cabecera":{"numero_factura":"","fecha":"","proveedor":"","
 const REFINE_PROMPT = `Eres un clasificador arancelario experto de Ecuador. Para cada ítem tienes su descripción, posibles "previos" (clasificaciones que ESTA agencia de aduana ya hizo para productos iguales o muy parecidos) y una lista de subpartidas OFICIALES candidatas del arancel (código "c" y texto "d").
 PRIORIDAD 1: Si en "previos" hay un producto que es claramente el MISMO (o prácticamente el mismo) que el ítem, usa esa subpartida — así clasifica la agencia y debe mantenerse la consistencia (salvo que sea evidentemente incorrecta).
 PRIORIDAD 2: Si no hay previo aplicable, elige la subpartida MÁS ESPECÍFICA según las 6 Reglas Generales de Interpretación; usa las NOTAS EXPLICATIVAS oficiales como criterio para incluir/excluir el producto de la partida. Prefiere SIEMPRE la subpartida específica sobre las de "los demás". Elige un código que esté en la lista de candidatos.
-Devuelve SOLO JSON: {"items":[{"i":0,"subpartida":"<10 dígitos del código elegido>","regla":"regla(s) aplicada(s)","justificacion":"explicación clara de por qué ese producto va en esa partida, citando la nota explicativa si aplica, 1-2 frases"}]}.`;
+MATERIAL (clave para calzado, prendas, textiles, muebles y similares, donde el material define la partida): identifica el material de la parte relevante (ej. parte superior del calzado: cuero=6403, textil=6404, plástico/caucho=6402). Si la descripción del invoice NO indica el material explícitamente (solo trae un nombre o modelo comercial, ej. "Solevana Style"), infiere el más probable pero marca "verificar": true. Si el material está explícito en la descripción o no aplica, "verificar": false.
+Devuelve SOLO JSON: {"items":[{"i":0,"subpartida":"<10 dígitos del código elegido>","material":"material relevante inferido o explícito","verificar":false,"regla":"regla(s) aplicada(s)","justificacion":"explicación clara de por qué ese producto va en esa partida, citando la nota explicativa si aplica, 1-2 frases"}]}.`;
 
 async function rpcPrefix(url: string, key: string, prefix: string) {
   try {
@@ -212,6 +213,8 @@ export async function POST(req: NextRequest) {
           : rf.justificacion || it.justificacion || "",
         arancel_oficial: near ? near.d : null,
         ad_valorem: near ? near.adv : null,
+        material: rf.material || "",
+        verificar: usarMem ? false : Boolean(rf.verificar),
         exacto: !!exact,
       };
     });

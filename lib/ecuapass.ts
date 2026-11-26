@@ -14,6 +14,8 @@ export type ItemClasificado = {
   ad_valorem?: number | null;
   restriccion?: { tipo: string; institucion: string; documento: string } | null;
   fuente?: string; // 'historial' (memoria de la agencia) | 'ia'
+  material?: string;
+  verificar?: boolean; // true = el material se infirió; el agente debe confirmarlo
 };
 
 export type Cabecera = {

@@ -212,6 +212,11 @@ export default function InvoiceTool() {
                       {it.arancel_oficial
                         ? <div className="mt-0.5 max-w-[150px] truncate text-[10px] text-[var(--good)]" title={it.arancel_oficial}>✓ {it.arancel_oficial}</div>
                         : <div className="mt-0.5 text-[10px] text-[var(--amber)]">⚠ revisar en arancel</div>}
+                      {it.verificar && (
+                        <div className="mt-0.5 max-w-[170px] truncate rounded bg-[rgba(255,179,71,0.16)] px-1 text-[10px] font-semibold text-[var(--amber)]" title={`Material inferido: ${it.material || "?"}. Confirma si es cuero / textil / sintético antes de declarar.`}>
+                          ⚠ verificar material{it.material ? ` (${it.material})` : ""}
+                        </div>
+                      )}
                       {it.restriccion && (
                         <div
                           className={`mt-0.5 max-w-[160px] truncate rounded px-1 text-[10px] font-semibold ${it.restriccion.tipo === "prohibida" ? "bg-[rgba(255,107,107,0.14)] text-[var(--bad)]" : "bg-[rgba(255,179,71,0.14)] text-[var(--amber)]"}`}
