@@ -96,7 +96,7 @@ export default function InvoiceTool() {
   /* ---------- PANTALLA DE UPGRADE (si es free) ---------- */
   if (!premium) {
     return (
-      <div className="mx-auto flex h-[calc(100%-56px)] max-w-2xl items-center justify-center px-4 md:px-8">
+      <div className="mx-auto flex min-h-0 flex-1 max-w-2xl items-center justify-center px-4 md:px-8">
         <div className="hud hud-edge glow w-full max-w-md p-8 text-center rise">
           <div className="mono mb-3 inline-block rounded-full bg-[rgba(255,179,71,0.14)] px-3 py-1 text-[11px] font-bold tracking-wider text-[var(--amber)]">
             PREMIUM
@@ -148,7 +148,7 @@ export default function InvoiceTool() {
 
   /* ---------- HERRAMIENTA (si es premium) ---------- */
   return (
-    <div className="mx-auto flex h-[calc(100%-56px)] max-w-5xl flex-col px-4 pt-5 md:px-8 md:pt-6">
+    <div className="mx-auto flex min-h-0 flex-1 max-w-5xl flex-col px-4 pt-5 md:px-8 md:pt-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[var(--cyan)] px-5 py-2.5 font-semibold text-[var(--bg)] transition hover:brightness-110">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5-5 5 5M12 5v12" /></svg>

@@ -65,7 +65,7 @@ export default function HistorialTool() {
   const limpiar = () => { setQ(""); setAnio(""); setMes(""); };
 
   return (
-    <div className="mx-auto flex h-[calc(100%-56px)] max-w-5xl flex-col px-4 pt-5 md:px-8 md:pt-6">
+    <div className="mx-auto flex min-h-0 flex-1 max-w-5xl flex-col px-4 pt-5 md:px-8 md:pt-6">
       {/* cabecera + stats */}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -98,7 +98,37 @@ export default function HistorialTool() {
       )}
 
       {estado === "ok" && regs.length > 0 && (
-        <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-[var(--line)]">
+        <div className="min-h-0 flex-1 overflow-y-auto pb-3 md:flex md:flex-col md:overflow-hidden md:pb-0">
+        {/* Móvil: tarjetas */}
+        <div className="flex flex-col gap-2 md:hidden">
+          {filtrados.map((r) => (
+            <div key={r.id} className="hud p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate font-semibold text-[var(--fg)]" title={r.cliente || ""}>{r.cliente || "—"}</div>
+                  <div className="truncate text-[12px] text-[var(--muted)]" title={r.proveedor || ""}>{r.proveedor || "—"}</div>
+                </div>
+                <div className="mono whitespace-nowrap text-[11px] text-[var(--muted)]">{fecha(r.created_at)}</div>
+              </div>
+              <div className="mt-2.5 flex items-center justify-between gap-2">
+                <div className="mono text-[12px] text-[var(--cyan)]">
+                  {r.numero_factura || "—"} <span className="text-[var(--muted)]">· {r.items?.length ?? 0} ítems</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => r.items && descargarExcel(r.items, r.cabecera || {})} className="rounded-lg border border-[var(--line-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--cyan)] transition hover:bg-[rgba(56,225,255,0.1)]">Excel</button>
+                  <button onClick={() => borrar(r.id)} title="Borrar" className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--line)] text-[var(--muted)] transition hover:text-[var(--bad)]">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {filtrados.length === 0 && (
+            <p className="mono px-3 py-10 text-center text-sm text-[var(--muted)]">Sin resultados con esos filtros.</p>
+          )}
+        </div>
+        {/* Escritorio: tabla */}
+        <div className="hidden min-h-0 flex-1 overflow-auto rounded-xl border border-[var(--line)] md:block">
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0 z-10 bg-[var(--surface-2,#0c1721)]">
               <tr className="mono text-[10px] uppercase tracking-wider text-[var(--muted)]">
@@ -133,6 +163,7 @@ export default function HistorialTool() {
               )}
             </tbody>
           </table>
+        </div>
         </div>
       )}
     </div>

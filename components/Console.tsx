@@ -108,12 +108,7 @@ function resizeImage(file: File, max = 1024): Promise<string> {
 }
 
 export default function Console({ userEmail, onLogout }: { userEmail?: string; onLogout?: () => void }) {
-  const [mode, setMode] = useState<Mode>(() => {
-    if (typeof window === "undefined") return "buscar";
-    const m = new URLSearchParams(window.location.search).get("m");
-    const valid: Mode[] = ["buscar", "imagen", "declaracion", "calcular", "consultar", "historial"];
-    return valid.includes(m as Mode) ? (m as Mode) : "buscar";
-  });
+  const [mode, setMode] = useState<Mode>("buscar");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Arancel[]>([]);
   const [searching, setSearching] = useState(false);
@@ -134,6 +129,13 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
 
   const [restrMap, setRestrMap] = useState<Record<string, Restriccion>>({});
   const [detalle, setDetalle] = useState<Arancel | null>(null);
+
+  /* modo inicial desde la URL (?m=) para los accesos directos de la PWA */
+  useEffect(() => {
+    const m = new URLSearchParams(window.location.search).get("m");
+    const valid: Mode[] = ["buscar", "imagen", "declaracion", "calcular", "consultar", "historial"];
+    if (m && valid.includes(m as Mode)) setMode(m as Mode);
+  }, []);
 
   /* búsqueda con debounce */
   useEffect(() => {
@@ -293,7 +295,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
         </nav>
 
         {/* contenido */}
-        <section className="relative order-1 min-h-0 flex-1 overflow-hidden md:order-2">
+        <section className="relative order-1 flex min-h-0 flex-1 flex-col overflow-hidden md:order-2">
           {/* encabezado minimal */}
           <div className="flex items-center justify-between gap-2 px-4 pt-[calc(env(safe-area-inset-top)+1rem)] md:px-8 md:pt-6">
             <div className="mono text-xs tracking-[0.35em] text-[var(--muted)]">
@@ -315,7 +317,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
 
           {/* ---- BUSCAR ---- */}
           {mode === "buscar" && (
-            <div className="flex h-[calc(100%-56px)] flex-col px-4 pt-5 md:px-8 md:pt-8">
+            <div className="flex min-h-0 flex-1 flex-col px-4 pt-5 md:px-8 md:pt-8">
               <div className="relative mx-auto w-full max-w-2xl">
                 <I.search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--muted)]" />
                 <input
@@ -374,7 +376,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
 
           {/* ---- IMAGEN ---- */}
           {mode === "imagen" && (
-            <div className="mx-auto flex h-[calc(100%-56px)] max-w-3xl flex-col px-4 pt-5 md:px-8 md:pt-8">
+            <div className="mx-auto flex min-h-0 flex-1 max-w-3xl flex-col px-4 pt-5 md:px-8 md:pt-8">
               <div className="grid gap-5 md:grid-cols-[230px_1fr]">
                 <div className="mx-auto w-full max-w-[220px] md:max-w-none">
                   <label className="hud hud-edge flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden p-2 text-center transition hover:border-[var(--line-strong)]">
@@ -440,7 +442,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
 
           {/* ---- CALCULAR ---- */}
           {mode === "calcular" && (
-            <div className="grid h-[calc(100%-56px)] grid-cols-1 gap-4 overflow-y-auto px-4 pb-6 pt-5 md:grid-cols-2 md:gap-6 md:overflow-hidden md:px-8 md:pb-8 md:pt-6">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto px-4 pb-6 pt-5 md:grid-cols-2 md:gap-6 md:overflow-hidden md:px-8 md:pb-8 md:pt-6">
               {/* entradas */}
               <div className="hud hud-edge flex flex-col p-6">
                 {selected ? (
@@ -502,7 +504,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
 
           {/* ---- CONSULTAR ---- */}
           {mode === "consultar" && (
-            <div className="mx-auto flex h-[calc(100%-56px)] max-w-2xl flex-col px-4 pb-6 pt-5 md:px-8 md:pt-6">
+            <div className="mx-auto flex min-h-0 flex-1 max-w-2xl flex-col px-4 pb-6 pt-5 md:px-8 md:pt-6">
               <div ref={chatRef} className="flex-1 space-y-4 overflow-y-auto pr-1">
                 {chat.length === 0 && (
                   <p className="mono mt-20 text-center text-sm text-[var(--muted)]">Pregunta sobre regímenes, documentos o normativa aduanera.</p>
