@@ -106,3 +106,17 @@ body {
 @keyframes bd { 0%, 80%, 100% { transform: scale(0.5); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---------- Móvil ---------- */
+/* En la barra inferior el indicador activo pasa a ser una línea superior */
+@media (max-width: 767px) {
+  .rail-btn[data-active="true"]::before {
+    left: 50%; top: -6px; transform: translateX(-50%);
+    width: 20px; height: 3px;
+  }
+}
+/* Evita el zoom automático de iOS al enfocar campos (fuente < 16px) */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px; }
+  .cmd { font-size: 16px; }
+}

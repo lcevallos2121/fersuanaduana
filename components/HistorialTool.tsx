@@ -65,7 +65,7 @@ export default function HistorialTool() {
   const limpiar = () => { setQ(""); setAnio(""); setMes(""); };
 
   return (
-    <div className="mx-auto flex h-[calc(100%-56px)] max-w-5xl flex-col px-8 pt-6">
+    <div className="mx-auto flex h-[calc(100%-56px)] max-w-5xl flex-col px-4 pt-5 md:px-8 md:pt-6">
       {/* cabecera + stats */}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>

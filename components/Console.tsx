@@ -223,7 +223,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
     .join(", ");
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden">
+    <main className="relative h-[100dvh] w-screen overflow-hidden">
       <HudBackground />
       <Onboarding />
 
@@ -237,7 +237,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
               </div>
               <button onClick={() => setDetalle(null)} className="rail-btn !h-8 !w-8 text-[var(--muted)] hover:text-[var(--fg)]">✕</button>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="hud p-3"><div className="mono text-[10px] tracking-wider text-[var(--muted)]">AD-VALOREM</div><div className="text-2xl font-bold text-[var(--amber)]">{detalle.ad_valorem != null ? `${detalle.ad_valorem}%` : "—"}</div></div>
               <div className="hud p-3"><div className="mono text-[10px] tracking-wider text-[var(--muted)]">OTROS TRIBUTOS</div><div className="mt-1 text-sm text-[var(--fg)]">FODINFA 0,5% · IVA 15%{detalle.especifico ? ` · ${detalle.especifico}` : ""}</div></div>
             </div>
@@ -262,18 +262,10 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
         </div>
       )}
 
-      {/* aviso PC */}
-      <div className="fixed inset-0 z-50 hidden max-[940px]:flex items-center justify-center bg-[var(--bg)] px-8 text-center">
-        <div className="hud hud-edge glow max-w-xs p-6">
-          <div className="mono text-sm tracking-widest text-[var(--cyan)]">FERSUANADUANA</div>
-          <p className="mt-3 text-[var(--muted)]">Consola optimizada para escritorio. Ábrela en PC.</p>
-        </div>
-      </div>
-
-      <div className="relative z-10 flex h-full">
-        {/* rail */}
-        <nav className="flex w-[70px] flex-none flex-col items-center gap-2 border-r border-[var(--line)] py-5">
-          <div className="mb-4 grid h-10 w-10 place-items-center text-[var(--cyan)] text-glow">
+      <div className="relative z-10 flex h-full flex-col md:flex-row">
+        {/* rail / barra inferior en móvil */}
+        <nav className="order-2 flex flex-none items-center justify-around gap-1 border-t border-[var(--line)] bg-[rgba(4,7,11,0.9)] pt-2 pb-[calc(env(safe-area-inset-bottom)+8px)] backdrop-blur md:order-1 md:w-[70px] md:flex-col md:justify-start md:gap-2 md:border-t-0 md:border-r md:bg-transparent md:py-5 md:backdrop-blur-0">
+          <div className="mb-4 hidden h-10 w-10 place-items-center text-[var(--cyan)] text-glow md:grid">
             <I.mark className="h-7 w-7" />
           </div>
           <button className="rail-btn" data-active={mode === "buscar"} onClick={() => setMode("buscar")} title="Clasificar">
@@ -294,16 +286,16 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
           <button className="rail-btn" data-active={mode === "historial"} onClick={() => setMode("historial")} title="Historial">
             <I.clock className="h-5 w-5" />
           </button>
-          <div className="mt-auto flex flex-col items-center gap-1">
+          <div className="hidden md:mt-auto md:flex md:flex-col md:items-center md:gap-1">
             <span className={`h-2 w-2 rounded-full ${supabaseReady ? "bg-[var(--good)]" : "bg-[var(--bad)]"} blink`} />
             <span className="mono text-[9px] text-[var(--muted)]">EC</span>
           </div>
         </nav>
 
         {/* contenido */}
-        <section className="relative flex-1 overflow-hidden">
+        <section className="relative order-1 min-h-0 flex-1 overflow-hidden md:order-2">
           {/* encabezado minimal */}
-          <div className="flex items-center justify-between px-8 pt-6">
+          <div className="flex items-center justify-between gap-2 px-4 pt-4 md:px-8 md:pt-6">
             <div className="mono text-xs tracking-[0.35em] text-[var(--muted)]">
               FERSUANADUANA <span className="text-[var(--cyan)]">/</span> {mode === "buscar" ? "CLASIFICACIÓN" : mode === "imagen" ? "IMAGEN" : mode === "declaracion" ? "DECLARACIÓN" : mode === "calcular" ? "LIQUIDACIÓN" : mode === "historial" ? "HISTORIAL" : "CONSULTA"}
             </div>
@@ -311,7 +303,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
               <span className="mono hidden text-[11px] text-[var(--muted)] sm:inline">ARANCEL 002-2023</span>
               <a href="/admin" className="mono text-[11px] text-[var(--muted)] transition hover:text-[var(--cyan)]">Admin</a>
               {userEmail && (
-                <span className="mono max-w-[160px] truncate text-[11px] text-[var(--muted)]" title={userEmail}>{userEmail}</span>
+                <span className="mono hidden max-w-[160px] truncate text-[11px] text-[var(--muted)] sm:inline" title={userEmail}>{userEmail}</span>
               )}
               {onLogout && (
                 <button onClick={onLogout} title="Cerrar sesión" className="rail-btn !h-8 !w-8 text-[var(--muted)] hover:text-[var(--cyan)]">
@@ -323,7 +315,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
 
           {/* ---- BUSCAR ---- */}
           {mode === "buscar" && (
-            <div className="flex h-[calc(100%-56px)] flex-col px-8 pt-8">
+            <div className="flex h-[calc(100%-56px)] flex-col px-4 pt-5 md:px-8 md:pt-8">
               <div className="relative mx-auto w-full max-w-2xl">
                 <I.search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--muted)]" />
                 <input
@@ -382,9 +374,9 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
 
           {/* ---- IMAGEN ---- */}
           {mode === "imagen" && (
-            <div className="mx-auto flex h-[calc(100%-56px)] max-w-3xl flex-col px-8 pt-8">
+            <div className="mx-auto flex h-[calc(100%-56px)] max-w-3xl flex-col px-4 pt-5 md:px-8 md:pt-8">
               <div className="grid gap-5 md:grid-cols-[230px_1fr]">
-                <div>
+                <div className="mx-auto w-full max-w-[220px] md:max-w-none">
                   <label className="hud hud-edge flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden p-2 text-center transition hover:border-[var(--line-strong)]">
                     {imgPreview ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -448,7 +440,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
 
           {/* ---- CALCULAR ---- */}
           {mode === "calcular" && (
-            <div className="grid h-[calc(100%-56px)] grid-cols-2 gap-6 px-8 pb-8 pt-6">
+            <div className="grid h-[calc(100%-56px)] grid-cols-1 gap-4 overflow-y-auto px-4 pb-6 pt-5 md:grid-cols-2 md:gap-6 md:overflow-hidden md:px-8 md:pb-8 md:pt-6">
               {/* entradas */}
               <div className="hud hud-edge flex flex-col p-6">
                 {selected ? (
@@ -465,7 +457,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
                     <Num key={k} label={lbl} prefix="$" value={calc[k]} onChange={(v) => setCalc((c) => ({ ...c, [k]: v }))} />
                   ))}
                 </div>
-                <div className="mt-3 grid grid-cols-4 gap-3">
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {([["adValorem", "Arancel"], ["iva", "IVA"], ["ice", "ICE"], ["salvaguardia", "Salvag."]] as const).map(([k, lbl]) => (
                     <Num key={k} label={lbl} suffix="%" value={calc[k]} onChange={(v) => setCalc((c) => ({ ...c, [k]: v }))} />
                   ))}
@@ -510,7 +502,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
 
           {/* ---- CONSULTAR ---- */}
           {mode === "consultar" && (
-            <div className="mx-auto flex h-[calc(100%-56px)] max-w-2xl flex-col px-8 pb-6 pt-6">
+            <div className="mx-auto flex h-[calc(100%-56px)] max-w-2xl flex-col px-4 pb-6 pt-5 md:px-8 md:pt-6">
               <div ref={chatRef} className="flex-1 space-y-4 overflow-y-auto pr-1">
                 {chat.length === 0 && (
                   <p className="mono mt-20 text-center text-sm text-[var(--muted)]">Pregunta sobre regímenes, documentos o normativa aduanera.</p>
