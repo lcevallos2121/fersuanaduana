@@ -58,7 +58,7 @@ export default function AccesoPage() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center px-5 py-10" style={{ background: "var(--bg)" }}>
+    <main className="grid min-h-screen place-items-center px-5 pb-10 pt-[calc(env(safe-area-inset-top)+2.5rem)]" style={{ background: "var(--bg)" }}>
       <div className="w-full max-w-sm">
         <Link href="/" className="mb-7 flex items-center justify-center gap-2 text-[var(--cyan)]">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-7 w-7">

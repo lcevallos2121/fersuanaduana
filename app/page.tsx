@@ -24,7 +24,7 @@ export default function Landing() {
       <HudBackground />
 
       {/* NAV */}
-      <nav className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+      <nav className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 pb-5 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
         <div className="flex items-center gap-2 text-[var(--cyan)]">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-7 w-7">
             <circle cx="12" cy="12" r="9" opacity=".5" /><circle cx="12" cy="12" r="4.5" /><path d="M12 3v3M12 18v3M3 12h3M18 12h3" />

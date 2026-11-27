@@ -295,7 +295,7 @@ export default function Console({ userEmail, onLogout }: { userEmail?: string; o
         {/* contenido */}
         <section className="relative order-1 min-h-0 flex-1 overflow-hidden md:order-2">
           {/* encabezado minimal */}
-          <div className="flex items-center justify-between gap-2 px-4 pt-4 md:px-8 md:pt-6">
+          <div className="flex items-center justify-between gap-2 px-4 pt-[calc(env(safe-area-inset-top)+1rem)] md:px-8 md:pt-6">
             <div className="mono text-xs tracking-[0.35em] text-[var(--muted)]">
               FERSUANADUANA <span className="text-[var(--cyan)]">/</span> {mode === "buscar" ? "CLASIFICACIÓN" : mode === "imagen" ? "IMAGEN" : mode === "declaracion" ? "DECLARACIÓN" : mode === "calcular" ? "LIQUIDACIÓN" : mode === "historial" ? "HISTORIAL" : "CONSULTA"}
             </div>
