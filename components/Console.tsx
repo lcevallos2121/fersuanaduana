@@ -108,7 +108,12 @@ function resizeImage(file: File, max = 1024): Promise<string> {
 }
 
 export default function Console({ userEmail, onLogout }: { userEmail?: string; onLogout?: () => void }) {
-  const [mode, setMode] = useState<Mode>("buscar");
+  const [mode, setMode] = useState<Mode>(() => {
+    if (typeof window === "undefined") return "buscar";
+    const m = new URLSearchParams(window.location.search).get("m");
+    const valid: Mode[] = ["buscar", "imagen", "declaracion", "calcular", "consultar", "historial"];
+    return valid.includes(m as Mode) ? (m as Mode) : "buscar";
+  });
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Arancel[]>([]);
   const [searching, setSearching] = useState(false);

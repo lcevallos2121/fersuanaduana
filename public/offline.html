@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#04070b" />
+<title>Sin conexión — FERSUANADUANA</title>
+<style>
+  :root { --bg:#04070b; --cyan:#38e1ff; --fg:#d6ecf5; --muted:#5f7d8c; }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; }
+  body {
+    background: radial-gradient(120vw 90vh at 50% -20%, #0a1826 0%, var(--bg) 55%), var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    display:flex; align-items:center; justify-content:center; text-align:center; padding:24px;
+  }
+  .card { max-width:420px; }
+  .ring { width:112px; height:112px; margin:0 auto 26px; position:relative; }
+  .ring svg { width:100%; height:100%; animation:spin 9s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .ring svg { animation:none; } }
+  h1 { font-size:20px; letter-spacing:.14em; margin:0 0 10px; text-transform:uppercase; }
+  p { color:var(--muted); line-height:1.6; margin:0 0 24px; font-size:15px; }
+  button {
+    background:transparent; color:var(--cyan); border:1px solid rgba(56,225,255,.4);
+    border-radius:12px; padding:12px 22px; font-size:14px; letter-spacing:.08em;
+    text-transform:uppercase; cursor:pointer; transition:.2s;
+  }
+  button:hover { background:rgba(56,225,255,.1); box-shadow:0 0 22px rgba(56,225,255,.18); }
+  .mono { font-family:ui-monospace, Menlo, Consolas, monospace; color:var(--cyan); font-size:12px; letter-spacing:.2em; margin-top:28px; opacity:.6; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="ring">
+      <svg viewBox="0 0 100 100" fill="none" stroke="#38e1ff">
+        <polygon points="50,6 88,28 88,72 50,94 12,72 12,28" stroke-width="2" opacity=".9"/>
+        <polygon points="50,20 75,34 75,66 50,80 25,66 25,34" stroke-width="1" opacity=".35"/>
+        <circle cx="50" cy="50" r="4" fill="#38e1ff" stroke="none"/>
+      </svg>
+    </div>
+    <h1>Sin conexión</h1>
+    <p>No hay internet en este momento. La clasificación con IA y las búsquedas necesitan conexión. Reconéctate y reintenta.</p>
+    <button onclick="location.reload()">Reintentar</button>
+    <div class="mono">FERSUANADUANA · OFFLINE</div>
+  </div>
+  <script>
+    addEventListener("online", () => location.reload());
+  </script>
+</body>
+</html>
